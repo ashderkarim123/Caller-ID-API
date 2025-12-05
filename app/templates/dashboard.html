@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caller-ID Rotation API - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .badge-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-reserved {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-fill.warning {
+            background: #ffc107;
+        }
+        
+        .progress-fill.danger {
+            background: #dc3545;
+        }
+        
+        .campaign-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📞 Caller-ID Rotation API</h1>
+            <p>Admin Dashboard - Real-time Caller-ID Management</p>
+        </header>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Caller-IDs</h3>
+                <div class="value">{{ total_caller_ids }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Caller-IDs</h3>
+                <div class="value">{{ active_caller_ids }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Reservations</h3>
+                <div class="value">{{ active_reservations|length }}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Caller-ID Statistics</h2>
+            <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Caller-ID</th>
+                            <th>Carrier</th>
+                            <th>Area Code</th>
+                            <th>Daily Usage</th>
+                            <th>Hourly Usage</th>
+                            <th>Last Used</th>
+                            <th>Total Uses</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in caller_id_stats %}
+                        <tr>
+                            <td><strong>{{ stat.caller_id }}</strong></td>
+                            <td>{{ stat.carrier or '-' }}</td>
+                            <td>{{ stat.area_code or '-' }}</td>
+                            <td>
+                                {{ stat.daily_used }} / {{ stat.daily_limit }}
+                                <div class="progress-bar">
+                                    {% set daily_pct = (stat.daily_used / stat.daily_limit * 100) if stat.daily_limit > 0 else 0 %}
+                                    <div class="progress-fill {% if daily_pct > 90 %}danger{% elif daily_pct > 70 %}warning{% endif %}" 
+                                         style="width: {{ daily_pct }}%"></div>
+                                </div>
+                            </td>
+                            <td>
+                                {{ stat.hourly_used }} / {{ stat.hourly_limit }}
+                                <div class="progress-bar">
+                                    {% set hourly_pct = (stat.hourly_used / stat.hourly_limit * 100) if stat.hourly_limit > 0 else 0 %}
+                                    <div class="progress-fill {% if hourly_pct > 90 %}danger{% elif hourly_pct > 70 %}warning{% endif %}" 
+                                         style="width: {{ hourly_pct }}%"></div>
+                                </div>
+                            </td>
+                            <td class="timestamp">
+                                {% if stat.last_used %}
+                                    {{ stat.last_used[:19].replace('T', ' ') }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </td>
+                            <td>{{ stat.total_uses }}</td>
+                            <td>
+                                {% if stat.is_reserved %}
+                                    <span class="badge badge-reserved">Reserved</span>
+                                {% elif stat.is_active %}
+                                    <span class="badge badge-active">Active</span>
+                                {% else %}
+                                    <span class="badge badge-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔒 Active Reservations</h2>
+            {% if active_reservations %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Caller-ID</th>
+                        <th>Agent</th>
+                        <th>Campaign</th>
+                        <th>To Number</th>
+                        <th>Reserved Until</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in active_reservations %}
+                    <tr>
+                        <td><strong>{{ res.caller_id }}</strong></td>
+                        <td>{{ res.agent }}</td>
+                        <td>{{ res.campaign }}</td>
+                        <td>{{ res.to_number or '-' }}</td>
+                        <td class="timestamp">{{ res.reserved_until[:19].replace('T', ' ') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No active reservations</p>
+            {% endif %}
+        </div>
+        
+        <div class="section">
+            <h2>📊 Campaign Statistics</h2>
+            {% if campaign_stats %}
+            <div>
+                {% for stat in campaign_stats %}
+                <div class="campaign-item">
+                    <strong>{{ stat.campaign }}</strong> - 
+                    {{ stat.count }} calls
+                    {% if stat.last_used %}
+                    <span class="timestamp">(Last: {{ stat.last_used[:19].replace('T', ' ') }})</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No campaign data available</p>
+            {% endif %}
+        </div>
+        
+        <div class="section">
+            <h2>📝 Recent API Requests</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Endpoint</th>
+                        <th>Agent</th>
+                        <th>Campaign</th>
+                        <th>Caller-ID</th>
+                        <th>Status</th>
+                        <th>Response Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in recent_requests %}
+                    <tr>
+                        <td class="timestamp">{{ req.created_at.strftime('%Y-%m-%d %H:%M:%S') if req.created_at else '-' }}</td>
+                        <td>{{ req.endpoint }}</td>
+                        <td>{{ req.agent or '-' }}</td>
+                        <td>{{ req.campaign or '-' }}</td>
+                        <td>{{ req.caller_id or '-' }}</td>
+                        <td>
+                            {% if req.status_code == 200 %}
+                                <span style="color: green;">{{ req.status_code }}</span>
+                            {% else %}
+                                <span style="color: red;">{{ req.status_code }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ req.response_time_ms }}ms</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh every 30 seconds
+        setTimeout(function() {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>

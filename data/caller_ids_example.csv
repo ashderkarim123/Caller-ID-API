@@ -1,0 +1,5 @@
+caller_id,carrier,area_code,daily_limit,hourly_limit
+12145550101,Verizon,214,500,60
+12145550102,AT&T,214,500,60
+13035550103,T-Mobile,303,400,50
+14085550104,Sprint,408,450,55

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="stats-grid">
+  <div class="card">
+    <h3>Total Caller IDs</h3>
+    <p>{{ caller_ids|length }}</p>
+  </div>
+  <div class="card">
+    <h3>Active Reservations</h3>
+    <p>{{ reservations|length }}</p>
+  </div>
+  <div class="card">
+    <h3>Campaigns</h3>
+    <p>{{ campaigns|length }}</p>
+  </div>
+</section>
+
+<section>
+  <h2>Caller ID Pool</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Caller ID</th>
+        <th>Carrier</th>
+        <th>Area</th>
+        <th>Daily</th>
+        <th>Today</th>
+        <th>Hourly</th>
+        <th>This Hour</th>
+        <th>Last Used</th>
+        <th>Reserved</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cid in caller_ids %}
+      <tr class="{{ 'reserved' if cid.reserved else '' }}">
+        <td>{{ cid.caller_id }}</td>
+        <td>{{ cid.carrier or '-' }}</td>
+        <td>{{ cid.area_code or '-' }}</td>
+        <td>{{ cid.daily_limit }}</td>
+        <td>{{ cid.daily_count }}</td>
+        <td>{{ cid.hourly_limit }}</td>
+        <td>{{ cid.hourly_count }}</td>
+        <td>{{ cid.last_used or 'never' }}</td>
+        <td>{{ 'yes' if cid.reserved else 'no' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Active Reservations</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Caller ID</th>
+        <th>Agent</th>
+        <th>Campaign</th>
+        <th>Destination</th>
+        <th>Expires In (s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for res in reservations %}
+      <tr>
+        <td>{{ res.caller_id }}</td>
+        <td>{{ res.agent }}</td>
+        <td>{{ res.campaign }}</td>
+        <td>{{ res.destination }}</td>
+        <td>{{ res.expires_in }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">No active reservations</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Campaign Stats</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Campaign</th>
+        <th>Total Calls</th>
+        <th>Unique Agents</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for camp in campaigns %}
+      <tr>
+        <td>{{ camp.campaign }}</td>
+        <td>{{ camp.total_calls }}</td>
+        <td>{{ camp.unique_agents }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3">No campaign activity</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Recent API Requests</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Endpoint</th>
+        <th>Agent</th>
+        <th>Campaign</th>
+        <th>Caller ID</th>
+        <th>Destination</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in recent_requests %}
+      <tr>
+        <td>{{ entry.ts }}</td>
+        <td>{{ entry.endpoint }}</td>
+        <td>{{ entry.agent or '-' }}</td>
+        <td>{{ entry.campaign or '-' }}</td>
+        <td>{{ entry.caller_id or '-' }}</td>
+        <td>{{ entry.destination or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">No requests logged</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

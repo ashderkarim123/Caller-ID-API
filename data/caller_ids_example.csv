@@ -1,0 +1,6 @@
+caller_id,carrier,area_code,daily_limit,hourly_limit
+18005550100,carrierA,800,500,50
+18005550123,carrierA,800,500,50
+14155550101,carrierB,415,400,40
+13105550102,carrierC,310,350,35
+17185550103,carrierD,718,600,60

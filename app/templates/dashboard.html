@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caller-ID Rotation Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📞 Caller-ID Rotation Dashboard</h1>
+            <p class="subtitle">VICIdial Call Center Management</p>
+        </header>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_caller_ids }}</div>
+                    <div class="stat-label">Total Caller-IDs</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ active_caller_ids }}</div>
+                    <div class="stat-label">Active Caller-IDs</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">🔒</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ active_reservations|length }}</div>
+                    <div class="stat-label">Active Reservations</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ redis_health.status }}</div>
+                    <div class="stat-label">Redis Status</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign Statistics -->
+        <section class="section">
+            <h2>📊 Campaign Statistics (Last 24 Hours)</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Campaign</th>
+                            <th>Total Requests</th>
+                            <th>Successful Allocations</th>
+                            <th>Success Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if campaign_stats %}
+                            {% for stat in campaign_stats %}
+                            <tr>
+                                <td><strong>{{ stat.campaign or 'Unknown' }}</strong></td>
+                                <td>{{ stat.total_requests }}</td>
+                                <td>{{ stat.successful_allocations }}</td>
+                                <td>
+                                    {% set success_rate = (stat.successful_allocations / stat.total_requests * 100) if stat.total_requests > 0 else 0 %}
+                                    <span class="badge {% if success_rate >= 90 %}success{% elif success_rate >= 70 %}warning{% else %}error{% endif %}">
+                                        {{ "%.1f"|format(success_rate) }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #999;">No campaign data available</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Active Reservations -->
+        <section class="section">
+            <h2>🔒 Active Reservations</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Caller-ID</th>
+                            <th>Agent</th>
+                            <th>Campaign</th>
+                            <th>Destination</th>
+                            <th>Reserved At</th>
+                            <th>Expires At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if active_reservations %}
+                            {% for reservation in active_reservations %}
+                            <tr>
+                                <td><code>{{ reservation.caller_id }}</code></td>
+                                <td>{{ reservation.agent }}</td>
+                                <td>{{ reservation.campaign }}</td>
+                                <td>{{ reservation.destination }}</td>
+                                <td>{{ reservation.reserved_at.strftime('%Y-%m-%d %H:%M:%S') if reservation.reserved_at else 'N/A' }}</td>
+                                <td>{{ reservation.reserved_until.strftime('%Y-%m-%d %H:%M:%S') if reservation.reserved_until else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #999;">No active reservations</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Recent Caller-IDs -->
+        <section class="section">
+            <h2>📱 Recent Caller-IDs</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Caller-ID</th>
+                            <th>Area Code</th>
+                            <th>Carrier</th>
+                            <th>Hourly Limit</th>
+                            <th>Daily Limit</th>
+                            <th>Last Used</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_caller_ids %}
+                            {% for cid in recent_caller_ids %}
+                            <tr>
+                                <td><code>{{ cid.caller_id }}</code></td>
+                                <td>{{ cid.area_code or 'N/A' }}</td>
+                                <td>{{ cid.carrier or 'N/A' }}</td>
+                                <td>{{ cid.hourly_limit }}</td>
+                                <td>{{ cid.daily_limit }}</td>
+                                <td>{{ cid.last_used.strftime('%Y-%m-%d %H:%M:%S') if cid.last_used else 'Never' }}</td>
+                                <td>
+                                    {% if cid.is_active == 1 %}
+                                        <span class="badge success">Active</span>
+                                    {% else %}
+                                        <span class="badge error">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: #999;">No caller-IDs found</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Recent API Logs -->
+        <section class="section">
+            <h2>📝 Recent API Logs (Last 100)</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Endpoint</th>
+                            <th>Agent</th>
+                            <th>Campaign</th>
+                            <th>Allocated CID</th>
+                            <th>Response Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_logs %}
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</td>
+                                <td><code>{{ log.endpoint }}</code></td>
+                                <td>{{ log.agent or 'N/A' }}</td>
+                                <td>{{ log.campaign or 'N/A' }}</td>
+                                <td>{{ log.caller_id_allocated or 'N/A' }}</td>
+                                <td>{{ log.response_time_ms }}ms</td>
+                                <td>
+                                    {% if log.status_code == 200 %}
+                                        <span class="badge success">{{ log.status_code }}</span>
+                                    {% elif log.status_code >= 400 %}
+                                        <span class="badge error">{{ log.status_code }}</span>
+                                    {% else %}
+                                        <span class="badge">{{ log.status_code }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: #999;">No logs available</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Redis Health -->
+        <section class="section">
+            <h2>⚡ Redis Health</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Status:</strong>
+                    <span class="badge {% if redis_health.status == 'healthy' %}success{% else %}error{% endif %}">
+                        {{ redis_health.status }}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <strong>Connected Clients:</strong>
+                    {{ redis_health.connected_clients }}
+                </div>
+                <div class="info-item">
+                    <strong>Memory Used:</strong>
+                    {{ redis_health.used_memory }}
+                </div>
+                <div class="info-item">
+                    <strong>Uptime:</strong>
+                    {{ redis_health.uptime_seconds }} seconds
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Last updated: {{ current_time.strftime('%Y-%m-%d %H:%M:%S UTC') }}</p>
+            <p>VICIdial Caller-ID Rotation API v1.0.0</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

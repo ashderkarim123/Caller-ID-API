@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: callerid_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-callerid_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_password}
+      POSTGRES_DB: ${POSTGRES_DB:-callerid_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-callerid_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - callerid_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: callerid_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - callerid_network
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: callerid_api
+    restart: unless-stopped
+    environment:
+      # API Settings
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DEBUG: ${DEBUG:-false}
+      
+      # Database Settings
+      POSTGRES_USER: ${POSTGRES_USER:-callerid_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_password}
+      POSTGRES_DB: ${POSTGRES_DB:-callerid_db}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      
+      # Redis Settings
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      
+      # Security Settings
+      SECRET_KEY: ${SECRET_KEY:-change_this_secret_key_to_something_secure}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-change_this_admin_token}
+      
+      # Rate Limiting
+      DEFAULT_RESERVATION_TTL: ${DEFAULT_RESERVATION_TTL:-300}
+      DEFAULT_RATE_LIMIT_PER_AGENT: ${DEFAULT_RATE_LIMIT_PER_AGENT:-100}
+      
+      # Caller-ID Settings
+      DEFAULT_HOURLY_LIMIT: ${DEFAULT_HOURLY_LIMIT:-100}
+      DEFAULT_DAILY_LIMIT: ${DEFAULT_DAILY_LIMIT:-500}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - callerid_network
+    volumes:
+      - ./app:/app/app:ro  # Mount app directory as read-only for development
+
+networks:
+  callerid_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ app_name }} Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}" />
+  </head>
+  <body>
+    <header>
+      <h1>{{ app_name }} – Admin Dashboard</h1>
+      <p>Live caller-ID utilization overview</p>
+    </header>
+    <main>
+      <section class="stats">
+        <div class="card">
+          <h3>Total Caller IDs</h3>
+          <p>{{ stats.total_caller_ids }}</p>
+        </div>
+        <div class="card">
+          <h3>Active Reservations</h3>
+          <p>{{ stats.active_reservations }}</p>
+        </div>
+        <div class="card">
+          <h3>Campaign Usage</h3>
+          {% for campaign, count in stats.per_campaign.items() %}
+          <p><span class="pill">{{ campaign }}</span> {{ count }}</p>
+          {% else %}
+          <p>No campaign traffic yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section>
+        <h2>Caller IDs</h2>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Caller ID</th>
+                <th>Area</th>
+                <th>Carrier</th>
+                <th>Daily Limit</th>
+                <th>Hourly Limit</th>
+                <th>Last Used</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cid in caller_ids %}
+              <tr>
+                <td>{{ cid.caller_id }}</td>
+                <td>{{ cid.area_code or 'Any' }}</td>
+                <td>{{ cid.carrier or 'n/a' }}</td>
+                <td>{{ cid.daily_limit }}</td>
+                <td>{{ cid.hourly_limit }}</td>
+                <td>{{ cid.last_used or 'Never' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6">No caller IDs loaded.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Recent Reservations</h2>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Caller ID</th>
+                <th>Agent</th>
+                <th>Campaign</th>
+                <th>Reserved Until</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for res in reservations %}
+              <tr>
+                <td>{{ res.caller_id }}</td>
+                <td>{{ res.agent }}</td>
+                <td>{{ res.campaign }}</td>
+                <td>{{ res.reserved_until }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4">No reservations yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Last API Requests</h2>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Agent</th>
+                <th>Campaign</th>
+                <th>Caller ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for req in stats.last_requests %}
+              <tr>
+                <td>{{ req.timestamp }}</td>
+                <td>{{ req.agent }}</td>
+                <td>{{ req.campaign }}</td>
+                <td>{{ req.caller_id }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4">No requests logged.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
